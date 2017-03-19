@@ -22,6 +22,7 @@ namespace KabuKessanTransition
     {
         public MainWindow()
         {
+            this.DataContext = new MainWindowViewModel();
             InitializeComponent();
         }
     }
