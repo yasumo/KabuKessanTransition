@@ -104,7 +104,8 @@ namespace KabuKessanTransition
             Console.WriteLine(csvDir);
             Console.WriteLine(codeAndDate);
             Console.WriteLine(outputTsv);
-
+//            var hogehoge = DateTime.ParseExact("2004/11/24 20:23", "yyyy/M/dd HH:mm", null);
+//            var hoge =  DateTime.ParseExact("2017/3/17 15:15", "yyyy/MM/dd HH:mm", null);
         }
 
 
