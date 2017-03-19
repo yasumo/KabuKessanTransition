@@ -1,5 +1,7 @@
-﻿using System;
+﻿using CsvHelper;
+using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -8,13 +10,8 @@ namespace KabuKessanTransition
 {
     class MainWindowViewModel : BindableBase
     {
+
         #region プロパティ・プライベート変数
-        private string sqliteFilePath;
-        public string SQLiteFilePath
-        {
-            get { return sqliteFilePath; }
-            set { this.SetProperty(ref this.sqliteFilePath, value); }
-        }
         private string csvDir;
         public string CsvDir
         {
@@ -33,14 +30,28 @@ namespace KabuKessanTransition
             get { return outputTsv; }
             set { this.SetProperty(ref this.outputTsv, value); }
         }
+
+        private int offsetDays;
+        public int OffsetDays
+        {
+            get { return offsetDays; }
+            set { this.SetProperty(ref this.offsetDays, value); }
+        }
+        private List<Kabuka> csvData;
         #endregion
 
-        #region コマンド
-        private DelegateCommand updateDBCommand;
+        public MainWindowViewModel() {
+            CsvDir = "E:\\data\\dropbox\\Dropbox\\program\\kabu\\sh\\data";
+            offsetDays = 20;
+            csvData = new List<Kabuka>();
+        }
 
-        public DelegateCommand UpdateDBCommand
+        #region コマンド
+        private DelegateCommand loadCSVCommand;
+
+        public DelegateCommand LoadCSVCommand
         {
-            get { return this.updateDBCommand ?? (this.updateDBCommand = new DelegateCommand(updateDBCommandExecute, null)); }
+            get { return this.loadCSVCommand ?? (this.loadCSVCommand = new DelegateCommand(loadCSVCommandExecute, null)); }
         }
 
 
@@ -52,12 +63,39 @@ namespace KabuKessanTransition
         }
 
         #endregion
-        private void updateDBCommandExecute()
+        private void loadCSVCommandExecute()
         {
-            Console.WriteLine(csvDir);
-            Console.WriteLine(codeAndDate);
-            Console.WriteLine(outputTsv);
-            Console.WriteLine(sqliteFilePath);
+
+            //今日の日付
+            var today = DateTime.Today;
+
+            for (var i = 0; i < OffsetDays; i++) {
+                TimeSpan ts = new TimeSpan(i, 0, 0, 0);
+                var tmpDay = today - ts;
+                var csvName = "\\\\japan-all-stock-prices_"+ tmpDay.ToString("yyyyMMdd")+".csv";
+                var csvFilePath = CsvDir + csvName;
+                if (File.Exists(csvFilePath))
+                {
+                    CsvParser parser = new CsvParser(new StreamReader(csvFilePath, Encoding.GetEncoding("Shift-JIS")));
+                    parser.Configuration.HasHeaderRecord = true; // ヘッダ行は無い
+                    parser.Configuration.RegisterClassMap<KabukaMap>();
+
+                    CsvReader reader = new CsvReader(parser);
+                    csvData.AddRange(reader.GetRecords<Kabuka>().ToList());
+                }
+            }
+
+            var ho = from p in csvData
+                     where p.Code == "1333"
+                     select p;
+
+            foreach (var hoge in ho) {
+                Console.WriteLine(hoge.Code);
+                Console.WriteLine(hoge.Name);
+                Console.WriteLine(hoge.EndPrice);
+                Console.WriteLine(hoge.HighPrice);
+            }
+
         }
 
 
@@ -66,7 +104,6 @@ namespace KabuKessanTransition
             Console.WriteLine(csvDir);
             Console.WriteLine(codeAndDate);
             Console.WriteLine(outputTsv);
-            Console.WriteLine(sqliteFilePath);
 
         }
 
