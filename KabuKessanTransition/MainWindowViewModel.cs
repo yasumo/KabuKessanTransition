@@ -37,13 +37,14 @@ namespace KabuKessanTransition
             get { return offsetDays; }
             set { this.SetProperty(ref this.offsetDays, value); }
         }
-        private List<Kabuka> csvData;
+        private List<CsvKabukaRecode> csvData;
         #endregion
 
         public MainWindowViewModel() {
             CsvDir = "E:\\data\\dropbox\\Dropbox\\program\\kabu\\sh\\data";
-            offsetDays = 20;
-            csvData = new List<Kabuka>();
+            offsetDays = 40;
+            csvData = new List<CsvKabukaRecode>();
+            loadCSVCommandExecute();
         }
 
         #region コマンド
@@ -76,36 +77,46 @@ namespace KabuKessanTransition
                 var csvFilePath = CsvDir + csvName;
                 if (File.Exists(csvFilePath))
                 {
-                    CsvParser parser = new CsvParser(new StreamReader(csvFilePath, Encoding.GetEncoding("Shift-JIS")));
-                    parser.Configuration.HasHeaderRecord = true; // ヘッダ行は無い
-                    parser.Configuration.RegisterClassMap<KabukaMap>();
+                    using (CsvParser parser = new CsvParser(new StreamReader(csvFilePath, Encoding.GetEncoding("Shift-JIS"))))
+                    {
+                        parser.Configuration.HasHeaderRecord = true;
+                        parser.Configuration.RegisterClassMap<KabukaMap>();
 
-                    CsvReader reader = new CsvReader(parser);
-                    csvData.AddRange(reader.GetRecords<Kabuka>().ToList());
+                        using (CsvReader reader = new CsvReader(parser))
+                        {
+                            csvData.AddRange(reader.GetRecords<CsvKabukaRecode>().ToList());
+                        }
+                    }
                 }
             }
 
-            var ho = from p in csvData
-                     where p.Code == "1333"
-                     select p;
 
-            foreach (var hoge in ho) {
-                Console.WriteLine(hoge.Code);
-                Console.WriteLine(hoge.Name);
-                Console.WriteLine(hoge.EndPrice);
-                Console.WriteLine(hoge.HighPrice);
-            }
 
         }
 
 
         private void outputCommandExecute()
         {
-            Console.WriteLine(csvDir);
-            Console.WriteLine(codeAndDate);
-            Console.WriteLine(outputTsv);
-//            var hogehoge = DateTime.ParseExact("2004/11/24 20:23", "yyyy/M/dd HH:mm", null);
-//            var hoge =  DateTime.ParseExact("2017/3/17 15:15", "yyyy/MM/dd HH:mm", null);
+            using (CsvParser parser = new CsvParser(new StringReader(CodeAndDate)))
+            {
+                parser.Configuration.HasHeaderRecord = false;
+                parser.Configuration.Delimiter = "\t";
+                parser.Configuration.RegisterClassMap<InputCodeMap>();
+
+                using (CsvReader reader = new CsvReader(parser))
+                {
+                    var inputCodeAndDateList = reader.GetRecords<CsvInputCodeRecode>().ToList();
+
+                    var outputService = new OutputDataService(csvData);
+                    foreach (var codeAndDate in inputCodeAndDateList)
+                    {
+                        var kabuka = outputService.SearchKabuka(codeAndDate.Code, codeAndDate.Date);
+                        var tsvRecode = outputService.OutputTsv(kabuka);
+                        OutputTsv += tsvRecode + "\n";
+                    }
+                }
+            }
+
         }
 
 

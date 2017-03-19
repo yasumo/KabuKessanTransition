@@ -7,7 +7,21 @@ using System.Threading.Tasks;
 
 namespace KabuKessanTransition
 {
-    class Kabuka
+
+    class CsvInputCodeRecode {
+        public string Code { get; set; }
+        public DateTime Date { get; set; }
+    }
+    class InputCodeMap : CsvClassMap<CsvInputCodeRecode>
+    {
+        public InputCodeMap()
+        {
+            Map(m => m.Code).Index(0);
+            Map(m => m.Date).Index(1).TypeConverter<CsvDateConverter2>();
+        }
+    }
+
+    class CsvKabukaRecode
     {
         public string Code { get; set; }
         public string Name { get; set; }
@@ -17,7 +31,7 @@ namespace KabuKessanTransition
         public DateTime PriceDate { get; set; }
     }
 
-    class KabukaMap : CsvClassMap<Kabuka>
+    class KabukaMap : CsvClassMap<CsvKabukaRecode>
     {
         public KabukaMap()
         {
@@ -45,6 +59,23 @@ namespace KabuKessanTransition
                 return DateTime.MinValue;
             }
             return DateTime.ParseExact(text, "yyyy/M/d HH:mm", null);
+        }
+    }
+
+    public class CsvDateConverter2 : CsvHelper.TypeConversion.DateTimeConverter
+    {
+        public override object ConvertFromString(CsvHelper.TypeConversion.TypeConverterOptions options, string text)
+        {
+            if (text == null)
+            {
+                return base.ConvertFromString(options, null);
+            }
+
+            if (text.Trim().Length == 0 || text == "-")
+            {
+                return DateTime.MinValue;
+            }
+            return DateTime.ParseExact(text, "yyyy/MM/dd", null);
         }
     }
 
