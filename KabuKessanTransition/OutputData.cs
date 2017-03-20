@@ -117,7 +117,7 @@ namespace KabuKessanTransition
             string nhpp = "";
             if (k.NextDayKabuka.Price != null && k.ReferenceDayKabuka.Price != null)
             {
-                nhpp = ((k.NextDayKabuka.Price - k.ReferenceDayKabuka.Price) / k.ReferenceDayKabuka.Price )?.ToString("p2");
+                nhpp = ((k.NextDayKabuka.HighPrice - k.ReferenceDayKabuka.Price) / k.ReferenceDayKabuka.Price)?.ToString("p2");
             }
 
             //2週間前
@@ -126,7 +126,7 @@ namespace KabuKessanTransition
             string twbpp = "";
             if (k.ReferenceDayKabuka.Price != null && k.TwoWeeksBeforeKabuka.Price != null)
             {
-                twbpp = ((k.ReferenceDayKabuka.Price - k.TwoWeeksBeforeKabuka.Price) / k.TwoWeeksBeforeKabuka.Price )?.ToString("p2");
+                twbpp = ((k.TwoWeeksBeforeKabuka.Price - k.ReferenceDayKabuka.Price) / k.ReferenceDayKabuka.Price)?.ToString("p2");
             }
 
             //2週間前から基準日までの最大
@@ -135,7 +135,7 @@ namespace KabuKessanTransition
             string twbhpp = "";
             if (k.ReferenceDayKabuka.Price != null && k.TwoWeeksBeforeHighLow.HighestPrice != null)
             {
-                twbhpp = ((k.ReferenceDayKabuka.Price - k.TwoWeeksBeforeHighLow.HighestPrice) / k.TwoWeeksBeforeHighLow.HighestPrice )?.ToString("p2");
+                twbhpp = ((k.TwoWeeksBeforeHighLow.HighestPrice - k.ReferenceDayKabuka.Price) / k.ReferenceDayKabuka.Price)?.ToString("p2");
             }
 
             //2週間前から基準日までの最小
@@ -144,7 +144,7 @@ namespace KabuKessanTransition
             string twblpp = "";
             if (k.ReferenceDayKabuka.Price != null && k.TwoWeeksBeforeHighLow.LowestPrice != null)
             {
-                twblpp = ((k.ReferenceDayKabuka.Price - k.TwoWeeksBeforeHighLow.LowestPrice) / k.TwoWeeksBeforeHighLow.LowestPrice )?.ToString("p2");
+                twblpp = ((k.TwoWeeksBeforeHighLow.LowestPrice - k.ReferenceDayKabuka.Price) / k.ReferenceDayKabuka.Price)?.ToString("p2");
             }
 
             //2週間後
@@ -153,7 +153,7 @@ namespace KabuKessanTransition
             string twapp = "";
             if (k.ReferenceDayKabuka.Price != null && k.TwoWeeksAfterKabuka.Price != null)
             {
-                twapp = ((k.TwoWeeksAfterKabuka.Price - k.ReferenceDayKabuka.Price) / k.ReferenceDayKabuka.Price )?.ToString("p2");
+                twapp = ((k.TwoWeeksAfterKabuka.Price - k.ReferenceDayKabuka.Price) / k.ReferenceDayKabuka.Price)?.ToString("p2");
             }
 
             //基準日から2週間後までの最大
@@ -162,7 +162,7 @@ namespace KabuKessanTransition
             string twahpp = "";
             if (k.ReferenceDayKabuka.Price != null && k.TwoWeeksAfterHighLow.HighestPrice != null)
             {
-                twahpp = ((k.TwoWeeksAfterHighLow.HighestPrice - k.ReferenceDayKabuka.Price) / k.ReferenceDayKabuka.Price )?.ToString("p2");
+                twahpp = ((k.TwoWeeksAfterHighLow.HighestPrice - k.ReferenceDayKabuka.Price) / k.ReferenceDayKabuka.Price)?.ToString("p2");
             }
 
             //基準日から2週間後までの最小
@@ -171,10 +171,15 @@ namespace KabuKessanTransition
             string twalpp = "";
             if (k.ReferenceDayKabuka.Price != null && k.TwoWeeksAfterHighLow.LowestPrice != null)
             {
-                twalpp = ((k.TwoWeeksAfterHighLow.LowestPrice - k.ReferenceDayKabuka.Price) / k.ReferenceDayKabuka.Price )?.ToString("p2");
+                twalpp = ((k.TwoWeeksAfterHighLow.LowestPrice - k.ReferenceDayKabuka.Price) / k.ReferenceDayKabuka.Price)?.ToString("p2");
             }
 
-            string[] ret = { n,rd,rp,twbd,twbp,twbpp,twbhd,twbhp,twbhpp,twbld,twblp,twblpp,nd,nhp,nhpp,twad,twahd,twahp,twahpp,twald,twalp,twalpp };
+            //基準日を起点にした動き
+            string sb = createSparkLineBefore(k.ReferenceDayKabuka,k.TwoWeeksBeforeHighLow);
+            string sa = createSparkLineAfter(k.ReferenceDayKabuka,k.TwoWeeksAfterHighLow);
+
+
+            string[] ret = { n,twbhd,twbhp,twbhpp,twbld,twblp,twblpp,sb, rd, rp, nd,nhp,nhpp,twad,twahd,twahp,twahpp,twald,twalp,twalpp ,sa};
             return string.Join("\t", ret);
         }
 
@@ -186,6 +191,67 @@ namespace KabuKessanTransition
                    select p;
         }
 
+
+        const string SparkLineFormat2 = "=SPARKLINE({{{0},{1}}},{{\"charttype\",\"column\";\"color\",\"orange\";\"ymin\",{2}}})";
+        const string SparkLineFormat3 = "=SPARKLINE({{{0},{1},{2}}},{{\"charttype\",\"column\";\"color\",\"orange\";\"highcolor\",\"red\";\"ymin\",{3}}})";
+
+        private string createSparkLineBefore(Kabuka rk, KabukaHighLow hl)
+        {
+            var retVal = "";
+
+            if (rk.Price == null || hl.LowestPrice == null || hl.HighestPrice == null)
+            {
+                return retVal;
+            }
+
+            double[] ps = { hl.HighestPrice.GetValueOrDefault(0.0), hl.LowestPrice.GetValueOrDefault(0.0), rk.Price.GetValueOrDefault(0.0) };
+            string graphMin = Math.Round((ps.Min() * 0.95)).ToString();
+
+            if (hl.HighestDate > hl.LowestDate)
+            {
+                retVal = String.Format(SparkLineFormat3, hl.LowestPrice, hl.HighestPrice, rk.Price,  graphMin);
+            }
+            else if (hl.HighestDate < hl.LowestDate)
+            {
+                retVal = String.Format(SparkLineFormat3, hl.HighestPrice, hl.LowestPrice, rk.Price,  graphMin);
+            }
+            else
+            {
+                retVal = String.Format(SparkLineFormat2, (hl.HighestPrice + hl.LowestPrice)/2, rk.Price, graphMin);
+            }
+
+            return retVal;
+
+        }
+
+        private string createSparkLineAfter(Kabuka rk, KabukaHighLow hl)
+        {
+            var retVal = "";
+
+            if (rk.Price == null || hl.LowestPrice == null || hl.HighestPrice == null)
+            {
+                return retVal;
+            }
+
+            double[] ps = { hl.HighestPrice.GetValueOrDefault(0.0), hl.LowestPrice.GetValueOrDefault(0.0), rk.Price.GetValueOrDefault(0.0) };
+            string graphMin = Math.Round((ps.Min() * 0.95)).ToString();
+
+            if (hl.HighestDate > hl.LowestDate)
+            {
+                retVal = String.Format(SparkLineFormat3, rk.Price, hl.LowestPrice, hl.HighestPrice, graphMin);
+            }
+            else if (hl.HighestDate < hl.LowestDate)
+            {
+                retVal = String.Format(SparkLineFormat3, rk.Price, hl.HighestPrice, hl.LowestPrice,  graphMin);
+            }
+            else
+            {
+                retVal = String.Format(SparkLineFormat2, rk.Price, (hl.HighestPrice + hl.LowestPrice) / 2,  graphMin);
+            }
+
+            return retVal;
+
+        }
 
         private Kabuka getTargetDateData(IEnumerable<CsvKabukaRecode> targetList,DateTime targetDate)
         {
