@@ -1,10 +1,12 @@
 ﻿using CsvHelper;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows;
 
 namespace KabuKessanTransition
 {
@@ -42,9 +44,10 @@ namespace KabuKessanTransition
 
         public MainWindowViewModel() {
             CsvDir = "E:\\data\\dropbox\\Dropbox\\program\\kabu\\sh\\data";
-            offsetDays = 40;
+            offsetDays = 100;
             csvData = new List<CsvKabukaRecode>();
             loadCSVCommandExecute();
+            PropertyChanged += propertyChange;
         }
 
         #region コマンド
@@ -64,6 +67,14 @@ namespace KabuKessanTransition
         }
 
         #endregion
+
+        private void propertyChange(object sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName.Equals("CodeAndDate") )
+            {
+                outputCommandExecute();
+            }
+        }
         private void loadCSVCommandExecute()
         {
 
@@ -105,16 +116,27 @@ namespace KabuKessanTransition
 
                 using (CsvReader reader = new CsvReader(parser))
                 {
-                    var inputCodeAndDateList = reader.GetRecords<CsvInputCodeRecode>().ToList();
-
-                    var outputService = new OutputDataService(csvData);
-                    foreach (var codeAndDate in inputCodeAndDateList)
+                    try
                     {
-                        var kabuka = outputService.SearchKabuka(codeAndDate.Code, codeAndDate.Date);
-                        var tsvRecode = outputService.OutputTsv(kabuka);
-                        OutputTsv += tsvRecode + "\n";
+                        var inputCodeAndDateList = reader.GetRecords<CsvInputCodeRecode>().ToList();
+
+                        var outputService = new OutputDataService(csvData);
+                        foreach (var codeAndDate in inputCodeAndDateList)
+                        {
+                            var kabuka = outputService.SearchKabuka(codeAndDate.Code, codeAndDate.Date);
+                            var tsvRecode = outputService.OutputTsv(kabuka);
+                            OutputTsv += tsvRecode + "\n";
+                        }
                     }
+                    catch {
+                        //入力値がパース出来なかった時用、もうちょっと良いやり方が良い
+                        return;
+                    }
+
                 }
+            }
+            if (OutputTsv != null) { 
+                Clipboard.SetText(OutputTsv);
             }
 
         }
