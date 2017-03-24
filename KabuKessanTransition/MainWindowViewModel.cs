@@ -108,6 +108,7 @@ namespace KabuKessanTransition
 
         private void outputCommandExecute()
         {
+            OutputTsv = "";
             using (CsvParser parser = new CsvParser(new StringReader(CodeAndDate)))
             {
                 parser.Configuration.HasHeaderRecord = false;
@@ -123,7 +124,7 @@ namespace KabuKessanTransition
                         var outputService = new OutputDataService(csvData);
                         foreach (var codeAndDate in inputCodeAndDateList)
                         {
-                            var kabuka = outputService.SearchKabuka(codeAndDate.Code, codeAndDate.Date);
+                            var kabuka = outputService.SearchKabuka(codeAndDate.Code, codeAndDate.Date, codeAndDate.Offset);
                             var tsvRecode = outputService.OutputTsv(kabuka);
                             OutputTsv += tsvRecode + "\n";
                         }

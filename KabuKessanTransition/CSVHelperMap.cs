@@ -11,6 +11,7 @@ namespace KabuKessanTransition
     class CsvInputCodeRecode {
         public string Code { get; set; }
         public DateTime Date { get; set; }
+        public int Offset { get; set; }
     }
     class InputCodeMap : CsvClassMap<CsvInputCodeRecode>
     {
@@ -18,6 +19,7 @@ namespace KabuKessanTransition
         {
             Map(m => m.Code).Index(0);
             Map(m => m.Date).Index(1).TypeConverter<CsvDateConverter2>();
+            Map(m => m.Offset).Index(2).TypeConverter<CsvIntConverter>();
         }
     }
 
@@ -95,6 +97,27 @@ namespace KabuKessanTransition
             }
 
             Double.TryParse(text, out ret);
+            return ret;
+
+        }
+    }
+
+    public class CsvIntConverter : CsvHelper.TypeConversion.DateTimeConverter
+    {
+        public override object ConvertFromString(CsvHelper.TypeConversion.TypeConverterOptions options, string text)
+        {
+            int ret = 0;
+            if (text == null)
+            {
+                return ret;
+            }
+
+            if (text.Trim().Length == 0 || text == "-")
+            {
+                return ret;
+            }
+
+            Int32.TryParse(text, out ret);
             return ret;
 
         }
