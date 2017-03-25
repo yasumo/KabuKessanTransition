@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -47,7 +48,9 @@ namespace KabuKessanTransition
             offsetDays = 100;
             csvData = new List<CsvKabukaRecode>();
             loadCSVCommandExecute();
+            openPageCommandExecute();
             PropertyChanged += propertyChange;
+
         }
 
         #region コマンド
@@ -59,14 +62,18 @@ namespace KabuKessanTransition
         }
 
 
-        private DelegateCommand outputCommand;
+        private DelegateCommand openpageCommand;
 
-        public DelegateCommand OutputCommand
+        public DelegateCommand OpenPageCommand
         {
-            get { return this.outputCommand ?? (this.outputCommand = new DelegateCommand(outputCommandExecute, null)); }
+            get { return this.openpageCommand ?? (this.openpageCommand = new DelegateCommand(openPageCommandExecute, null)); }
         }
 
+
         #endregion
+
+
+
 
         private void propertyChange(object sender, PropertyChangedEventArgs e)
         {
@@ -100,11 +107,15 @@ namespace KabuKessanTransition
                     }
                 }
             }
-
-
-
         }
 
+
+        private void openPageCommandExecute()
+        {
+            Process.Start("C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe", "https://docs.google.com/spreadsheets/");
+            Process.Start("C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe", "https://kabutan.jp/news/");
+
+        }
 
         private void outputCommandExecute()
         {
