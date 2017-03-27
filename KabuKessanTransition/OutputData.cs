@@ -38,6 +38,10 @@ namespace KabuKessanTransition
     {
         public string Code { get; set; }
         public string Name { get; set; }
+        public Double QuarterEps { get; set; }
+        public Double Eps { get; set; }
+        public Double Per { get; set; }
+        public int Capitalization { get; set; }
         public Kabuka ReferenceDayKabuka { get; set; }
         public Kabuka NextDayKabuka { get; set; }
         public Kabuka OffsetDaysBeforeKabuka { get; set; }
@@ -46,77 +50,98 @@ namespace KabuKessanTransition
         public KabukaHighLow OffsetDaysBeforeHighLow { get; set; }
         public KabukaHighLow OffsetDaysAfterHighLow { get; set; }
 
-        public OutputKabuka(string code)
+        public OutputKabuka(string code,Double quarterEps)
         {
             Code = code;
+            QuarterEps = quarterEps;
         }
 
     }
+
+
     class OutputDataService
     {
-        private List<CsvKabukaRecode> srcKabukaList;
+        private List<StockPriceCSVRecode> srcPriceList;
+        private List<StockDataCSVRecode> srcDataList;
 
-        public OutputDataService(List<CsvKabukaRecode> kabukaList) {
-            if (kabukaList == null || kabukaList.Count() == 0)
+        public OutputDataService(List<StockPriceCSVRecode> priceList,List<StockDataCSVRecode> dataList) {
+            if (priceList == null || priceList.Count() == 0|| dataList==null||dataList.Count()==0)
             {
-                throw new ArgumentNullException("csvデータが空です");
+                throw new ArgumentNullException("csvデータのどちらかが空です");
             }
 
-            srcKabukaList = kabukaList;
+            srcPriceList = priceList;
+            srcDataList = dataList;
         }
 
-        public OutputKabuka SearchKabuka(string targetCode, DateTime referenceDate,int offset)
+        public OutputKabuka SearchKabuka(string targetCode, DateTime referenceDate,int offset,Double quarterEps)
         {
             if (targetCode == null || targetCode.Length == 0 || referenceDate == null)
             {
                 throw new ArgumentNullException("引数がおかしいです");
             }
 
-            var ret = new OutputKabuka(targetCode);
+            var ret = new OutputKabuka(targetCode, quarterEps);
 
-            //ターゲットの銘柄コードだけを抽出
-            var targetCodeList = getTargetCodeList(ret.Code);
+            //ターゲットの銘柄コードの基本情報を抽出
+            var targetCodeData = getTargetCodeData(ret.Code);
             //銘柄コードのデータが無ければ終了
-            if (targetCodeList == null || targetCodeList.Count() == 0)
+            if (targetCodeData == null)
+            {
+                return ret;
+            }
+            ret.Eps = targetCodeData.Eps;
+            ret.Per = targetCodeData.Per;
+            ret.Capitalization = targetCodeData.Capitalization;
+
+            //ターゲットの銘柄コードの価格リストだけを抽出
+            var targetCodePriceList = geTargetCodetPriceList(ret.Code);
+            //銘柄コードのデータが無ければ終了
+            if (targetCodePriceList == null || targetCodePriceList.Count() == 0)
             {
                 return ret;
             }
 
             //ターゲットの名前取得
-            ret.Name = targetCodeList.First().Name;
+            ret.Name = targetCodePriceList.First().Name;
 
             {
                 TimeSpan ts1 = new TimeSpan(1, 0, 0, 0);
                 TimeSpan tsOffset = new TimeSpan(offset, 0, 0, 0);
 
-                ret.ReferenceDayKabuka = getTargetDateData(targetCodeList, referenceDate);
-                ret.OffsetDaysBeforeKabuka = getTargetDateData(targetCodeList, ret.ReferenceDayKabuka.Date - tsOffset);
+                ret.ReferenceDayKabuka = getTargetDateData(targetCodePriceList, referenceDate);
+                ret.OffsetDaysBeforeKabuka = getTargetDateData(targetCodePriceList, ret.ReferenceDayKabuka.Date - tsOffset);
 
-                ret.NextDayKabuka = getTargetNextDateData(targetCodeList, ret.ReferenceDayKabuka.Date);
-                ret.OffsetDaysAfterKabuka = getTargetNextDateData(targetCodeList, ret.ReferenceDayKabuka.Date + tsOffset);
+                ret.NextDayKabuka = getTargetNextDateData(targetCodePriceList, ret.ReferenceDayKabuka.Date);
+                ret.OffsetDaysAfterKabuka = getTargetNextDateData(targetCodePriceList, ret.ReferenceDayKabuka.Date + tsOffset);
 
 
-                ret.OffsetDaysAfterHighLow = getHighLowPrice(targetCodeList, ret.ReferenceDayKabuka.Date+ts1, ret.ReferenceDayKabuka.Date + tsOffset);
-                ret.OffsetDaysBeforeHighLow = getHighLowPrice(targetCodeList, ret.ReferenceDayKabuka.Date - tsOffset, ret.ReferenceDayKabuka.Date );
+                ret.OffsetDaysAfterHighLow = getHighLowPrice(targetCodePriceList, ret.ReferenceDayKabuka.Date+ts1, ret.ReferenceDayKabuka.Date + tsOffset);
+                ret.OffsetDaysBeforeHighLow = getHighLowPrice(targetCodePriceList, ret.ReferenceDayKabuka.Date - tsOffset, ret.ReferenceDayKabuka.Date );
 
-                ret.LatestKabuka = getLatestDateData(targetCodeList);
+                ret.LatestKabuka = getLatestDateData(targetCodePriceList);
             }
 
             return ret;
         }
 
 
+
         public string OutputTsv(OutputKabuka kabukaRecode)
         {
             var k = kabukaRecode;
             //名前
-            string n = k.Name;
+            string name = k.Name;
+
+            //時価総額
+            string cap = (k.Capitalization/100.0).ToString("0.00");
+
             //基準日
-            string rd = k.ReferenceDayKabuka.Date.ToString("yyyy/MM/dd");
+            string rd = "'"+k.ReferenceDayKabuka.Date.ToString("MM/dd");
             string rp = k.ReferenceDayKabuka.Price.ToString();
 
             //基準日の次の日
-            string nd = k.NextDayKabuka.Date.ToString("yyyy/MM/dd");
+            string nd = "'" + k.NextDayKabuka.Date.ToString("MM/dd");
             string nhp = k.NextDayKabuka.HighPrice.ToString();
             string nhpp = "";
             if (k.NextDayKabuka.Price != null && k.ReferenceDayKabuka.Price != null)
@@ -125,7 +150,7 @@ namespace KabuKessanTransition
             }
 
             //2週間前
-            string twbd = k.OffsetDaysBeforeKabuka.Date.ToString("yyyy/MM/dd");
+            string twbd = "'" + k.OffsetDaysBeforeKabuka.Date.ToString("MM/dd");
             string twbp = k.OffsetDaysBeforeKabuka.Price.ToString();
             string twbpp = "";
             if (k.ReferenceDayKabuka.Price != null && k.OffsetDaysBeforeKabuka.Price != null)
@@ -134,7 +159,7 @@ namespace KabuKessanTransition
             }
 
             //2週間前から基準日までの最大
-            string twbhd = k.OffsetDaysBeforeHighLow.HighestDate?.ToString("yyyy/MM/dd");
+            string twbhd = "'" + k.OffsetDaysBeforeHighLow.HighestDate?.ToString("MM/dd");
             string twbhp = k.OffsetDaysBeforeHighLow.HighestPrice.ToString();
             string twbhpp = "";
             if (k.ReferenceDayKabuka.Price != null && k.OffsetDaysBeforeHighLow.HighestPrice != null)
@@ -143,7 +168,7 @@ namespace KabuKessanTransition
             }
 
             //2週間前から基準日までの最小
-            string twbld = k.OffsetDaysBeforeHighLow.LowestDate?.ToString("yyyy/MM/dd");
+            string twbld = "'" + k.OffsetDaysBeforeHighLow.LowestDate?.ToString("MM/dd");
             string twblp = k.OffsetDaysBeforeHighLow.LowestPrice.ToString();
             string twblpp = "";
             if (k.ReferenceDayKabuka.Price != null && k.OffsetDaysBeforeHighLow.LowestPrice != null)
@@ -161,7 +186,7 @@ namespace KabuKessanTransition
             }
 
             //基準日からオフセット(入力)日後までの最大
-            string oahd = k.OffsetDaysAfterHighLow.HighestDate?.ToString("yyyy/MM/dd");
+            string oahd = "'" + k.OffsetDaysAfterHighLow.HighestDate?.ToString("MM/dd");
             string oahp = k.OffsetDaysAfterHighLow.HighestPrice.ToString();
             string oahpp = "";
             if (k.ReferenceDayKabuka.Price != null && k.OffsetDaysAfterHighLow.HighestPrice != null)
@@ -170,7 +195,7 @@ namespace KabuKessanTransition
             }
 
             //基準日からオフセット(入力)日後までの最小
-            string oald = k.OffsetDaysAfterHighLow.LowestDate?.ToString("yyyy/MM/dd");
+            string oald = "'" + k.OffsetDaysAfterHighLow.LowestDate?.ToString("MM/dd");
             string oalp = k.OffsetDaysAfterHighLow.LowestPrice.ToString();
             string oalpp = "";
             if (k.ReferenceDayKabuka.Price != null && k.OffsetDaysAfterHighLow.LowestPrice != null)
@@ -179,7 +204,7 @@ namespace KabuKessanTransition
             }
 
             //最新株価
-            string ld = k.LatestKabuka.Date.ToString("yyyy/MM/dd"); ;
+            string ld = "'" + k.LatestKabuka.Date.ToString("MM/dd"); ;
             string lp = k.LatestKabuka.Price.ToString();
             string lpp = ((k.LatestKabuka.Price - k.ReferenceDayKabuka.Price) / k.ReferenceDayKabuka.Price)?.ToString("p2");
 
@@ -187,20 +212,35 @@ namespace KabuKessanTransition
             string sb = createSparkLineBefore(k.ReferenceDayKabuka,k.OffsetDaysBeforeHighLow);
             string sa = createSparkLineAfter(k.ReferenceDayKabuka,k.OffsetDaysAfterHighLow,k.NextDayKabuka,k.LatestKabuka);
 
+            //予想PER
+            string per = k.Per.ToString("0.00");
 
+            string per15p = (k.Eps * 15).ToString("0");
+            string per40p = (k.Eps * 40).ToString("0");
 
-            string[] ret = { n,twbhd,twbhp,twbhpp,twbld,twblp,twblpp,sb, rd, rp, nd,nhp,nhpp,oad,oahd,oahp,oahpp,oald,oalp,oalpp ,ld,lp,lpp, sa };
+            //楽観per
+            string rPer = (k.LatestKabuka.Price / (k.QuarterEps*4))?.ToString("0.00");
+
+            string rPer15p = ((k.QuarterEps * 4) * 15).ToString("0");
+            string rPer40p = ((k.QuarterEps * 4) * 40).ToString("0");
+
+            string[] ret = { name, cap, ld, lp, lpp, twbhd, twbhp, twbhpp, twbld, twblp, twblpp, sb, rd, rp, nd, nhp, nhpp, oad, oahd, oahp, oahpp, oald, oalp, oalpp, sa, per, per15p, per40p, rPer, rPer15p, rPer40p };
             return string.Join("\t", ret);
         }
 
-        private IEnumerable<CsvKabukaRecode> getTargetCodeList(string targetCode)
+        private IEnumerable<StockPriceCSVRecode> geTargetCodetPriceList(string targetCode)
         {
 
-            return from p in srcKabukaList
+            return from p in srcPriceList
                    where p.Code == targetCode
                    select p;
         }
 
+        private StockDataCSVRecode getTargetCodeData(string targetCode) {
+            return (from p in srcDataList
+                    where p.Code == targetCode
+                    select p).FirstOrDefault();
+        }
 
         const string SparkLineFormat2 = "=SPARKLINE({{{0},{1}}},{{\"charttype\",\"column\";\"color\",\"orange\";\"ymin\",{2}}})";
         const string SparkLineFormat3 = "=SPARKLINE({{{0},{1},{2}}},{{\"charttype\",\"column\";\"color\",\"orange\";\"highcolor\",\"red\";\"ymin\",{3}}})";
@@ -269,7 +309,7 @@ namespace KabuKessanTransition
 
         }
 
-        private Kabuka getLatestDateData(IEnumerable<CsvKabukaRecode> targetList)
+        private Kabuka getLatestDateData(IEnumerable<StockPriceCSVRecode> targetList)
         {
             var targetDateKabuka = (from p in targetList
                                     orderby p.PriceDate descending
@@ -285,7 +325,7 @@ namespace KabuKessanTransition
         }
 
 
-        private Kabuka getTargetDateData(IEnumerable<CsvKabukaRecode> targetList,DateTime targetDate)
+        private Kabuka getTargetDateData(IEnumerable<StockPriceCSVRecode> targetList,DateTime targetDate)
         {
             DateTime retDate=targetDate;
             Double? retPrice = null;
@@ -307,7 +347,7 @@ namespace KabuKessanTransition
 
             return new Kabuka(retDate, retPrice,retHighPrice,retLowPrice);
         }
-        private Kabuka getTargetNextDateData(IEnumerable<CsvKabukaRecode> targetList, DateTime targetDate)
+        private Kabuka getTargetNextDateData(IEnumerable<StockPriceCSVRecode> targetList, DateTime targetDate)
         {
             DateTime retDate = targetDate;
             Double? retPrice = null;
@@ -330,7 +370,7 @@ namespace KabuKessanTransition
             return new Kabuka(retDate, retPrice,retHighPrice, retLowPrice);
         }
 
-        private KabukaHighLow getHighLowPrice(IEnumerable<CsvKabukaRecode> targetList, DateTime start,DateTime end)
+        private KabukaHighLow getHighLowPrice(IEnumerable<StockPriceCSVRecode> targetList, DateTime start,DateTime end)
         {
             DateTime? retHighDate = null;
             Double? retHighPrice = null;

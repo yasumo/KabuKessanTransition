@@ -12,6 +12,7 @@ namespace KabuKessanTransition
         public string Code { get; set; }
         public DateTime Date { get; set; }
         public int Offset { get; set; }
+        public Double QuarterEps { get; set; }
     }
     class InputCodeMap : CsvClassMap<CsvInputCodeRecode>
     {
@@ -20,10 +21,11 @@ namespace KabuKessanTransition
             Map(m => m.Code).Index(0);
             Map(m => m.Date).Index(1).TypeConverter<CsvDateConverter2>();
             Map(m => m.Offset).Index(2).TypeConverter<CsvIntConverter>();
+            Map(m => m.QuarterEps).Index(3).TypeConverter<CsvDoubleConverter>();
         }
     }
 
-    class CsvKabukaRecode
+    class StockPriceCSVRecode
     {
         public string Code { get; set; }
         public string Name { get; set; }
@@ -33,9 +35,9 @@ namespace KabuKessanTransition
         public DateTime PriceDate { get; set; }
     }
 
-    class KabukaMap : CsvClassMap<CsvKabukaRecode>
+    class StockPriceMap : CsvClassMap<StockPriceCSVRecode>
     {
-        public KabukaMap()
+        public StockPriceMap()
         {
             Map(m => m.Code).Index(0);
             Map(m => m.Name).Index(1);
@@ -43,6 +45,25 @@ namespace KabuKessanTransition
             Map(m => m.HighPrice).Index(10).TypeConverter<CsvDoubleConverter>();
             Map(m => m.LowPrice).Index(11).TypeConverter<CsvDoubleConverter>();
             Map(m => m.PriceDate).Index(4).TypeConverter<CsvDateConverter>();
+        }
+    }
+
+    class StockDataCSVRecode
+    {
+        public string Code { get; set; }
+        public int Capitalization { get; set; }
+        public Double Per { get; set; }
+        public Double Eps { get; set; }
+    }
+
+    class StockDataMap : CsvClassMap<StockDataCSVRecode>
+    {
+        public StockDataMap()
+        {
+            Map(m => m.Code).Index(0);
+            Map(m => m.Capitalization).Index(4).TypeConverter<CsvIntConverter>();
+            Map(m => m.Per).Index(8).TypeConverter<CsvDoubleConverter>();
+            Map(m => m.Eps).Index(10).TypeConverter<CsvDoubleConverter>();
         }
     }
 
