@@ -47,6 +47,10 @@ namespace KabuKessanTransition
         public Kabuka OffsetDaysBeforeKabuka { get; set; }
         public Kabuka OffsetDaysAfterKabuka { get; set; }
         public Kabuka LatestKabuka { get; set; }
+        public Double? Yesterday5SMA { get; set; }
+        public Double? Latest5SMA { get; set; }
+        public Double? Yesterday5SMACustom { get; set; }
+        public Double? Latest5SMACustom { get; set; }
         public KabukaHighLow OffsetDaysBeforeHighLow { get; set; }
         public KabukaHighLow OffsetDaysAfterHighLow { get; set; }
 
@@ -119,7 +123,29 @@ namespace KabuKessanTransition
                 ret.OffsetDaysAfterHighLow = getHighLowPrice(targetCodePriceList, ret.ReferenceDayKabuka.Date+ts1, ret.ReferenceDayKabuka.Date + tsOffset);
                 ret.OffsetDaysBeforeHighLow = getHighLowPrice(targetCodePriceList, ret.ReferenceDayKabuka.Date - tsOffset, ret.ReferenceDayKabuka.Date );
 
-                ret.LatestKabuka = getLatestDateData(targetCodePriceList);
+                ret.LatestKabuka = getKabukaElementAt(targetCodePriceList, 0);
+                ret.Latest5SMA = ((getKabukaElementAt(targetCodePriceList, 0).Price 
+                    + getKabukaElementAt(targetCodePriceList, 1).Price 
+                    + getKabukaElementAt(targetCodePriceList, 2).Price
+                    + getKabukaElementAt(targetCodePriceList, 3).Price
+                    + getKabukaElementAt(targetCodePriceList, 4).Price) / 5);
+                ret.Yesterday5SMA = ((getKabukaElementAt(targetCodePriceList, 1).Price 
+                    + getKabukaElementAt(targetCodePriceList, 2).Price 
+                    + getKabukaElementAt(targetCodePriceList, 3).Price
+                    + getKabukaElementAt(targetCodePriceList, 4).Price
+                    + getKabukaElementAt(targetCodePriceList, 5).Price) / 5);
+
+                ret.Latest5SMACustom = ((getKabukaElementAt(targetCodePriceList, 0).Price * 3
+                    + getKabukaElementAt(targetCodePriceList, 1).Price * 2
+                    + getKabukaElementAt(targetCodePriceList, 2).Price
+                    + getKabukaElementAt(targetCodePriceList, 3).Price
+                    + getKabukaElementAt(targetCodePriceList, 4).Price) / 8);
+                ret.Yesterday5SMACustom = ((getKabukaElementAt(targetCodePriceList, 1).Price * 3
+                    + getKabukaElementAt(targetCodePriceList, 2).Price * 2
+                    + getKabukaElementAt(targetCodePriceList, 3).Price
+                    + getKabukaElementAt(targetCodePriceList, 4).Price
+                    + getKabukaElementAt(targetCodePriceList, 5).Price) / 8);
+
             }
 
             return ret;
@@ -149,32 +175,7 @@ namespace KabuKessanTransition
                 nhpp = ((k.NextDayKabuka.HighPrice - k.ReferenceDayKabuka.Price) / k.ReferenceDayKabuka.Price)?.ToString("p2");
             }
 
-            //2週間前
-            string twbd = "'" + k.OffsetDaysBeforeKabuka.Date.ToString("MM/dd");
-            string twbp = k.OffsetDaysBeforeKabuka.Price.ToString();
-            string twbpp = "";
-            if (k.ReferenceDayKabuka.Price != null && k.OffsetDaysBeforeKabuka.Price != null)
-            {
-                twbpp = ((k.OffsetDaysBeforeKabuka.Price - k.ReferenceDayKabuka.Price) / k.ReferenceDayKabuka.Price)?.ToString("p2");
-            }
 
-            //2週間前から基準日までの最大
-            string twbhd = "'" + k.OffsetDaysBeforeHighLow.HighestDate?.ToString("MM/dd");
-            string twbhp = k.OffsetDaysBeforeHighLow.HighestPrice.ToString();
-            string twbhpp = "";
-            if (k.ReferenceDayKabuka.Price != null && k.OffsetDaysBeforeHighLow.HighestPrice != null)
-            {
-                twbhpp = ((k.OffsetDaysBeforeHighLow.HighestPrice - k.ReferenceDayKabuka.Price) / k.ReferenceDayKabuka.Price)?.ToString("p2");
-            }
-
-            //2週間前から基準日までの最小
-            string twbld = "'" + k.OffsetDaysBeforeHighLow.LowestDate?.ToString("MM/dd");
-            string twblp = k.OffsetDaysBeforeHighLow.LowestPrice.ToString();
-            string twblpp = "";
-            if (k.ReferenceDayKabuka.Price != null && k.OffsetDaysBeforeHighLow.LowestPrice != null)
-            {
-                twblpp = ((k.OffsetDaysBeforeHighLow.LowestPrice - k.ReferenceDayKabuka.Price) / k.ReferenceDayKabuka.Price)?.ToString("p2");
-            }
 
             //オフセット(入力)日後
             string oad = k.OffsetDaysAfterKabuka.Date.ToString("yyyy/MM/dd");
@@ -208,6 +209,13 @@ namespace KabuKessanTransition
             string lp = k.LatestKabuka.Price.ToString();
             string lpp = ((k.LatestKabuka.Price - k.ReferenceDayKabuka.Price) / k.ReferenceDayKabuka.Price)?.ToString("p2");
 
+            //5日移動平均の変化率
+            string sma5 = ((k.Latest5SMA - k.Yesterday5SMA) / k.Yesterday5SMA)?.ToString("p2");
+
+            //加重5日移動平均の変化率
+            string sma5cu = ((k.Latest5SMACustom - k.Yesterday5SMACustom) / k.Yesterday5SMACustom)?.ToString("p2");
+
+
             //基準日を起点にした動き
             string sb = createSparkLineBefore(k.ReferenceDayKabuka,k.OffsetDaysBeforeHighLow);
             string sa = createSparkLineAfter(k.ReferenceDayKabuka,k.OffsetDaysAfterHighLow,k.NextDayKabuka,k.LatestKabuka);
@@ -224,7 +232,7 @@ namespace KabuKessanTransition
             string rPer15p = ((k.QuarterEps * 4) * 15).ToString("0");
             string rPer40p = ((k.QuarterEps * 4) * 40).ToString("0");
 
-            string[] ret = { name, cap, ld, lp, lpp, twbhd, twbhp, twbhpp, twbld, twblp, twblpp, sb, rd, rp, nd, nhp, nhpp, oad, oahd, oahp, oahpp, oald, oalp, oalpp, sa, per, per15p, per40p, rPer, rPer15p, rPer40p };
+            string[] ret = { name, cap, ld, lp , sma5, sma5cu, lpp, rd, rp, nd, nhp, nhpp, oahd, oahp, oahpp, oald, oalp, oalpp, sa, per, per15p, per40p, rPer, rPer15p, rPer40p };
             return string.Join("\t", ret);
         }
 
@@ -309,20 +317,23 @@ namespace KabuKessanTransition
 
         }
 
-        private Kabuka getLatestDateData(IEnumerable<StockPriceCSVRecode> targetList)
-        {
+        private Kabuka getKabukaElementAt(IEnumerable<StockPriceCSVRecode> targetList,int at) {
             var targetDateKabuka = (from p in targetList
                                     orderby p.PriceDate descending
-                                    select p).FirstOrDefault();
+                                    select p).ElementAt(at);
 
-            if (targetDateKabuka != null) {
+            if (targetDateKabuka != null)
+            {
                 return new Kabuka(targetDateKabuka.PriceDate, targetDateKabuka.EndPrice, targetDateKabuka.HighPrice, targetDateKabuka.HighPrice);
             }
-            else {
+            else
+            {
                 return null;
             }
-
         }
+
+
+
 
 
         private Kabuka getTargetDateData(IEnumerable<StockPriceCSVRecode> targetList,DateTime targetDate)
